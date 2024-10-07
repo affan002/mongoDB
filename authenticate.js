@@ -10,7 +10,7 @@ function authenticate(req, res, next) {
         req.userId = decodedData.id;
         next()
     } else {
-        res.status(403).send({
+        res.status(403).json({
             message: "not found"
         })
     }
