@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcrypt');
 const {UserModel, TodoModel} = require("./db")
 const {authenticate, JWT_SECRET} = require("./authenticate")
 const jwt = require("jsonwebtoken")
@@ -14,9 +15,14 @@ app.post("/signup", async function(req, res) {
     const password = req.body.password;
     const name = req.body.name;
 
+
+    // both callback and await works 
+    const hashedPassword = await bcrypt.hash(password, 5)
+    console.log(hashedPassword)
+
     await UserModel.create({
         email: email,
-        password: password,
+        password: hashedPassword,
         name: name,
     })
 
@@ -31,11 +37,19 @@ app.post("/signin", async function(req, res) {
 
     const user = await UserModel.findOne({
         email: email,
-        password: password,
     })
 
+    if (!user) {
+        res.status(403).json({
+            message: "user doesnot exist"
+        })
+        return
+    }
 
-    if (user) {
+    const passwordMatch = await bcrypt.compare(password, user.password)
+
+
+    if (passwordMatch) {
         const token = jwt.sign({
             id: user._id.toString()
         }, JWT_SECRET);
