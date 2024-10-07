@@ -4,31 +4,66 @@ const {UserModel, TodoModel} = require("./db")
 const {authenticate, JWT_SECRET} = require("./authenticate")
 const jwt = require("jsonwebtoken")
 const mongoose = require("mongoose")
-
+const { z } = require('zod')
 
 mongoose.connect("mongodb+srv://muhammadaffan002ma:eo7JJbDA1ivAI8Ey@cluster0.kjx3l.mongodb.net/todo-app")
 const app = express();
 app.use(express.json())
 
 app.post("/signup", async function(req, res) {
+    const requiredBody = z.object({
+        email: z.string().min(3).max(100).email(),
+        name: z.string().min(3).max(100),
+        password: z.string().min(3).max(30)
+    })
+    // req.body
+    // {
+    //   email: string
+    //   password: string
+    //   name: string
+    // }
+    // input validation
+    const parsedDataWithSuccess = requiredBody.safeParse(req.body);
+
+    if (!parsedDataWithSuccess.success) {
+        res.json({
+            message: 'Incorrect format',
+            error: parsedDataWithSuccess.error
+        })
+        return;
+    }
+
     const email = req.body.email;
     const password = req.body.password;
     const name = req.body.name;
 
 
-    // both callback and await works 
-    const hashedPassword = await bcrypt.hash(password, 5)
-    console.log(hashedPassword)
+    let errorThrown = false;
+    // try catch for repeating emails
+    try {    // both callback and await works 
+        const hashedPassword = await bcrypt.hash(password, 5)
+        console.log(hashedPassword)
 
-    await UserModel.create({
-        email: email,
-        password: hashedPassword,
-        name: name,
-    })
+        await UserModel.create({
+            email: email,
+            password: hashedPassword,
+            name: name,
+        })
 
-    res.json({
-        message: "you have signed in"
-    })
+        
+    } catch(e) {
+        res.json({
+            message: "error while putting data in DB"
+        });
+        errorThrown = true;
+    }
+
+    if (!errorThrown) {
+        res.json({
+            message: "you have signed in"
+        })
+    }
+    
 });
 
 app.post("/signin", async function(req, res) {
